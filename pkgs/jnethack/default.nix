@@ -3,6 +3,7 @@
   fetchurl,
   nkf,
   lib,
+  maintainers,
 }:
 
 nethack.overrideAttrs (oldAttrs: {
@@ -41,6 +42,7 @@ nethack.overrideAttrs (oldAttrs: {
     description = "Japanese localization on NetHack";
     homepage = "https://jnethack.github.io/";
     license = licenses.ngpl;
+    maintainers = [ maintainers.thukumo ];
     platforms = platforms.unix;
   };
 })

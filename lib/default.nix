@@ -1,7 +1,12 @@
 { pkgs }:
 
 with pkgs.lib; {
-  # Add your library functions here
-  #
-  # hexint = x: hexvals.${toLower x};
+  maintainers = {
+    thukumo = {
+      email = "contact@tsukumo.f5.si";
+      github = "thukumo";
+      githubId = 131495948;
+      name = "tsukumo";
+    };
+  };
 }

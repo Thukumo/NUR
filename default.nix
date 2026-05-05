@@ -21,7 +21,7 @@
   # flakeModules = { }; # flake-parts modules
   overlays = import ./overlays; # nixpkgs overlays
 
-  jnethack = pkgs.callPackage ./pkgs/jnethack { };
+  jnethack = pkgs.callPackage ./pkgs/jnethack { inherit (import ./lib { inherit pkgs; }) maintainers; };
   # some-qt5-package = pkgs.libsForQt5.callPackage ./pkgs/some-qt5-package { };
   # ...
 }
