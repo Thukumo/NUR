@@ -1,6 +1,6 @@
 {
   nethack,
-  fetchpatch,
+  fetchurl,
   nkf,
   lib,
 }:
@@ -9,7 +9,7 @@ nethack.overrideAttrs (oldAttrs: {
   pname = "jnethack";
   # NixpkgsのNetHackもなんか3.6.7なので耐えてる
   patches = [
-    (fetchpatch {
+    (fetchurl {
       url = "https://ftp.jaist.ac.jp/pub/sourceforge.jp/jnethack/78334/jnethack-3.6.7-0.1.diff.gz";
       hash = "sha256-0Uom1uBnpi6dQx1ZGiv83t7ttCzts2CQkX5wSbATZ50=";
     })
@@ -31,8 +31,9 @@ nethack.overrideAttrs (oldAttrs: {
     substituteInPlace include/winX.h \
       --replace "E void (*input_func)();" "E void (*input_func)(Widget, XEvent *, String *, Cardinal *);"
 
-    sed -i '/extern XFontStruct \*WindowFontStruct/c\struct Widget;\nextern XFontStruct *WindowFontStruct(struct Widget *);' include/xwindow.h
-    sed -i '/extern Font WindowFont/c\extern Font WindowFont(struct Widget *);' include/xwindow.h
+    substituteInPlace include/xwindow.h \
+      --replace "extern XFontStruct *WindowFontStruct;" "struct Widget;\nextern XFontStruct *WindowFontStruct(struct Widget *);" \
+      --replace "extern Font WindowFont;" "extern Font WindowFont(struct Widget *);"
   '';
   postInstall = lib.replaceStrings [ "nethack" ] [ "jnethack" ] oldAttrs.postInstall;
 })
