@@ -36,4 +36,10 @@ nethack.overrideAttrs (oldAttrs: {
       --replace "extern Font WindowFont;" "extern Font WindowFont(struct Widget *);"
   '';
   postInstall = lib.replaceStrings [ "nethack" ] [ "jnethack" ] oldAttrs.postInstall;
+
+  meta = with lib; {
+    description = "Japanese localization on NetHack";
+    license = licenses.ngpl;
+    platforms = platforms.unix;
+  };
 })
