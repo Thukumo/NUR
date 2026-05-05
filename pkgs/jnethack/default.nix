@@ -39,6 +39,7 @@ nethack.overrideAttrs (oldAttrs: {
 
   meta = with lib; {
     description = "Japanese localization on NetHack";
+    homepage = "https://jnethack.github.io/";
     license = licenses.ngpl;
     platforms = platforms.unix;
   };
