@@ -11,6 +11,9 @@
   pkgs ? import <nixpkgs> { },
 }:
 
+let
+  yogabook-linux = import (import ./pkgs/yogabook-src.nix pkgs) { inherit pkgs; };
+in
 {
   # The `lib`, `overlays`, `nixosModules`, `homeModules`,
   # `darwinModules` and `flakeModules` names are special
@@ -25,7 +28,6 @@
   # some-qt5-package = pkgs.libsForQt5.callPackage ./pkgs/some-qt5-package { };
   # ...
 
-  yogabook-linux = import (import ./pkgs/yogabook-src.nix pkgs) { inherit pkgs; };
   yogabook-touch-keyboard = yogabook-linux.touch-keyboard;
   yogabook-iio-sensor-proxy = yogabook-linux.iio-sensor-proxy-yogabook;
   yogabook-modes-handler = yogabook-linux.yogabook-modes-handler;
