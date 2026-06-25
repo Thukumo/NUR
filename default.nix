@@ -12,7 +12,7 @@
 }:
 
 let
-  yogabook-linux = import (import ./pkgs/yogabook-src.nix pkgs) { inherit pkgs; };
+  yogabook-linux = pkgs.callPackage ./pkgs/yogabook-linux.nix {};
 in
 {
   # The `lib`, `overlays`, `nixosModules`, `homeModules`,
