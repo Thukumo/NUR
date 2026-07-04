@@ -33,4 +33,7 @@ in
   yogabook-modes-handler = yogabook-linux.yogabook-modes-handler;
   yogabook-config = yogabook-linux.yogabook-config;
   yogabook-kernel = yogabook-linux.yogabook-kernel;
+  yogabook-modules = yogabook-linux.yogabook-modules {
+    inherit (pkgs.linuxPackages) kernel kernelModuleMakeFlags;
+  };
 }

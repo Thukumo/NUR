@@ -29,7 +29,7 @@
         enable = lib.mkEnableOption "Lenovo Yoga Book YB1 hardware support";
         useCustomKernel = lib.mkOption {
           type = lib.types.bool;
-          default = true;
+          default = false;
           description = "Whether to use the custom patched Yoga Book kernel. Disabling this will use the default NixOS kernel.";
         };
       };
@@ -37,6 +37,21 @@
       config = lib.mkIf cfg.enable {
         # Custom kernel setup
         boot.kernelPackages = lib.mkIf cfg.useCustomKernel (pkgs.linuxPackagesFor yogabook-kernel);
+
+        # Extra kernel modules compiled out-of-tree for standard kernel
+        boot.extraModulePackages = lib.mkIf (!cfg.useCustomKernel) [
+          (yogabook-linux.yogabook-modules {
+            inherit (config.boot.kernelPackages) kernel kernelModuleMakeFlags;
+          })
+        ];
+
+        # Load necessary modules in order on boot
+        boot.kernelModules = [
+          "lenovo-yogabook"
+          "x86-android-tablets"
+          "drv260x"
+          "uinput"
+        ];
 
         # Kernel command-line parameters for screen rotation and power management
         boot.kernelParams = [
@@ -65,7 +80,7 @@
         # errors from missing legacy storage modules (ahci, ata_piix, etc.) and
         # keyboard modules (atkbd, i8042) which are not built in the custom kernel.
         boot.initrd.includeDefaultModules = lib.mkDefault (!cfg.useCustomKernel);
-        boot.initrd.availableKernelModules = [
+        boot.initrd.availableKernelModules = lib.mkIf cfg.useCustomKernel [
           # Storage / MMC
           "sdhci"
           "sdhci_acpi"
