@@ -72,6 +72,42 @@
           "uinput"
         ];
 
+        # Required for LUKS password entry via touch keyboard in initrd
+        boot.initrd.kernelModules = [
+          "lenovo-yogabook"
+          "x86-android-tablets"
+          "drv260x"
+          "hideep"
+          "uinput"
+        ];
+
+        # HWDB in initrd to tag touch keyboard Goodix device
+        boot.initrd.extraHwdb = config.services.udev.extraHwdb;
+
+        # Symlink rules in initrd
+        boot.initrd.services.udev.rules = ''
+          # Symlink touchscreen digitizer for the keyboard driver
+          ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ENV{TOUCH_KEYBOARD}=="1", SYMLINK+="touch_keyboard", TAG+="systemd", ENV{SYSTEMD_WANTS}+="touch-keyboard-handler.service"
+        '';
+
+        # Copy layout config into initrd
+        boot.initrd.systemd.contents = {
+          "/etc/touch_keyboard".source = touch-keyboard-etc;
+        };
+
+        # Start touch-keyboard-handler in initrd
+        boot.initrd.systemd.services.touch-keyboard-handler = {
+          description = "Touch keyboard handler in initrd";
+          wantedBy = [ "initrd.target" ];
+          after = [ "initrd-root-device.target" ];
+          serviceConfig = {
+            Type = "simple";
+            WorkingDirectory = "/etc/touch_keyboard";
+            ExecStart = "${touch-keyboard}/bin/touch_keyboard_handler -m 1.0 -D 6";
+            DefaultDependencies = false;
+          };
+        };
+
         # Kernel command-line parameters for screen rotation and power management
         boot.kernelParams = [
           "video=efifb:width:1200,stride:1200,height:1920"
