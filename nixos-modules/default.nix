@@ -24,6 +24,13 @@
         chmod -R +w $out/share/alsa/ucm2
         cp -r ${yogabook-src}/alsa-ucm-conf-yogabook/ucm2/* $out/share/alsa/ucm2/
       '';
+
+      # Create custom etc directory for touch-keyboard with layout.csv symlink
+      touch-keyboard-etc = pkgs.runCommand "touch-keyboard-etc" {} ''
+        mkdir -p $out
+        cp -r ${touch-keyboard}/etc/touch_keyboard/* $out/
+        ln -s layouts/YB1-X9x-${cfg.keyboardLayout}.csv $out/layout.csv
+      '';
     in {
       options.hardware.yogabook = {
         enable = lib.mkEnableOption "Lenovo Yoga Book YB1 hardware support";
@@ -31,6 +38,11 @@
           type = lib.types.bool;
           default = false;
           description = "Whether to use the custom patched Yoga Book kernel. Disabling this will use the default NixOS kernel.";
+        };
+        keyboardLayout = lib.mkOption {
+          type = lib.types.enum [ "pc104" "pc105" ];
+          default = "pc105";
+          description = "The physical keyboard layout of the Yoga Book (pc104 for US, pc105 for JP/EU).";
         };
       };
 
@@ -50,6 +62,7 @@
           "lenovo-yogabook"
           "x86-android-tablets"
           "drv260x"
+          "hideep"
           "uinput"
         ];
 
@@ -192,7 +205,7 @@
         };
 
         # Configuration layout files placement
-        environment.etc."touch_keyboard".source = "${touch-keyboard}/etc/touch_keyboard";
+        environment.etc."touch_keyboard".source = touch-keyboard-etc;
       };
     };
 }
