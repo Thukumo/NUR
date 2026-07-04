@@ -123,10 +123,12 @@ rec {
     nativeBuildInputs = kernel.moduleBuildDependencies;
  
     preConfigure = ''
+      patch -p1 -i ${./yogabook-wmi-power.patch}
       cp yogabook-linux-kernel/drivers/platform/x86/serdev_helpers.h .
       mkdir build
       cp -r yogabook-linux-kernel/drivers/platform/x86/x86-android-tablets/* build/
       cp yogabook-linux-kernel/drivers/input/misc/drv260x.c build/
+      cp yogabook-linux-kernel/drivers/platform/x86/lenovo/yogabook.c build/
       cd build
       
       cat << 'EOF' > Makefile
@@ -134,6 +136,8 @@ rec {
       obj-m += x86-android-tablets.o
       x86-android-tablets-y := core.o dmi.o shared-psy-info.o asus.o lenovo.o other.o
       obj-m += drv260x.o
+      obj-m += lenovo-yogabook.o
+      lenovo-yogabook-y := yogabook.o
       EOF
     '';
  
