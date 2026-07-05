@@ -81,11 +81,11 @@
           "uinput"
         ];
 
-        # HWDB in initrd to tag touch keyboard Goodix device
-        boot.initrd.extraHwdb = config.services.udev.extraHwdb;
-
         # Symlink rules in initrd
         boot.initrd.services.udev.rules = ''
+          # Tag Goodix Capacitive TouchScreen with TOUCH_KEYBOARD=1 directly
+          ACTION=="add|change", SUBSYSTEM=="input", ATTRS{name}=="Goodix Capacitive TouchScreen", ENV{TOUCH_KEYBOARD}="1"
+
           # Symlink touchscreen digitizer for the keyboard driver
           ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ENV{TOUCH_KEYBOARD}=="1", SYMLINK+="touch_keyboard", TAG+="systemd", ENV{SYSTEMD_WANTS}+="touch-keyboard-handler.service"
         '';
