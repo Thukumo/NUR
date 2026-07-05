@@ -8,7 +8,7 @@ let
     fetchSubmodules = true;
   };
 in
-rec {
+{
   src = yogabook-src;
 
   touch-keyboard = pkgs.stdenv.mkDerivation {
@@ -116,12 +116,12 @@ rec {
 
   yogabook-modules = { kernel, kernelModuleMakeFlags }: pkgs.stdenv.mkDerivation {
     pname = "yogabook-modules";
-    version = "${kernel.version}";
- 
+    version = kernel.version;
+
     src = yogabook-src;
- 
+
     nativeBuildInputs = kernel.moduleBuildDependencies;
- 
+
     preConfigure = ''
       patch -p1 -i ${./yogabook-wmi-power.patch}
       cp yogabook-linux-kernel/drivers/platform/x86/serdev_helpers.h .
@@ -130,7 +130,7 @@ rec {
       cp yogabook-linux-kernel/drivers/input/misc/drv260x.c build/
       cp yogabook-linux-kernel/drivers/platform/x86/lenovo/yogabook.c build/
       cd build
-      
+
       cat << 'EOF' > Makefile
       obj-m += vexia_atla10_ec.o
       obj-m += x86-android-tablets.o
@@ -140,22 +140,22 @@ rec {
       lenovo-yogabook-y := yogabook.o
       EOF
     '';
- 
+
     makeFlags = kernelModuleMakeFlags ++ [
       "-C ${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
       "modules"
     ];
- 
+
     preBuild = ''
       makeFlagsArray+=("M=$(pwd)")
     '';
- 
+
     installPhase = ''
       mkdir -p $out/lib/modules/${kernel.modDirVersion}/updates
       find . -name '*.ko' -exec cp '{}' $out/lib/modules/${kernel.modDirVersion}/updates/ \;
       find $out/lib/modules/${kernel.modDirVersion}/updates/ -name '*.ko' -exec xz -f '{}' \;
     '';
- 
+
     meta = {
       description = "Patched kernel modules for Lenovo Yoga Book (x86-android-tablets, drv260x)";
       license = lib.licenses.gpl2Only;
