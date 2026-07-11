@@ -10,10 +10,10 @@ rustPlatform.buildRustPackage {
   src = fetchFromGitHub {
     owner = "thukumo";
     repo = "rclamonacc";
-    rev = "3ba6463ca706a069b00002171e8cf2c7d1414ef6";
-    hash = "sha256-mgBNpTyZF2yh2PPZxuaZwls9c/yG1Kafm2hU/PbGKsw=";
+    rev = "7987b2628cf3c9e69602b21415fd21877d6fe3c8";
+    hash = "sha256-+rAiKqxwSPGUWRBCVYa1UUnW68NlKIbhQbE3FNItB38=";
   };
-  cargoHash = "sha256-mm4BNA6ArQWilTjs6uoows22RDfEVf67KASDCCtDrD4=";
+  cargoHash = "sha256-XjLMb7EN/Pso/ViEuDkbMAsoQPAVJg+F6OoS4YnWIho=";
   meta = with lib; {
     description = "Realtime Scanner like clamonacc";
     license = {
