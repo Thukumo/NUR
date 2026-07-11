@@ -22,6 +22,14 @@
         cp -r ${pkgs.alsa-ucm-conf}/share/alsa/ucm2/* $out/share/alsa/ucm2/
         chmod -R +w $out/share/alsa/ucm2
         cp -r ${yogabook-src}/alsa-ucm-conf-yogabook/ucm2/* $out/share/alsa/ucm2/
+
+        # Add PlaybackMixerElem to separate Speaker and Headphone volumes in UCM
+        substituteInPlace $out/share/alsa/ucm2/cht-yogabook/Speaker.conf \
+          --replace-fail 'PlaybackPCM "hw:''${CardId}"' 'PlaybackPCM "hw:''${CardId}"
+		PlaybackMixerElem "DAC1"'
+        substituteInPlace $out/share/alsa/ucm2/cht-yogabook/HeadsetPhones.conf \
+          --replace-fail 'PlaybackPCM "hw:''${CardId}"' 'PlaybackPCM "hw:''${CardId}"
+		PlaybackMixerElem "DAC2"'
       '';
 
       # Custom layout files shipped in this NUR repo (e.g. jp106)
@@ -37,17 +45,25 @@
         ln -sf layouts/YB1-X9x-${cfg.keyboardLayout}.csv $out/layout.csv
       '';
 
-      # Kernel modules required for Yoga Book hardware
       yogabookKernelModules = [
         "lenovo-yogabook"
         "x86-android-tablets"
         "drv260x"
         "hideep"
         "uinput"
+        "evdev"
         "i2c-dev"
         "goodix_ts"
         "i2c-designware-platform"
         "i2c-designware-core"
+        "wacom"
+        "i2c-hid-acpi"
+        "i2c-hid"
+        "hid-multitouch"
+        "hid-generic"
+      ] ++ lib.optionals cfg.enableCustomAudio [
+        "snd-soc-acpi-intel-match"
+        "snd-soc-sst-cht-yogabook"
       ];
     in {
       options.hardware.yogabook = {
@@ -56,6 +72,11 @@
           type = lib.types.bool;
           default = false;
           description = "Whether to use the custom patched Yoga Book kernel. Disabling this will use the default NixOS kernel.";
+        };
+        enableCustomAudio = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Whether to enable custom out-of-tree sound modules and UCM configuration for the Yoga Book. Disabling this will skip building/loading the audio modules, preventing compilation errors on newer kernels.";
         };
         keyboardLayout = lib.mkOption {
           type = lib.types.enum [ "pc104" "pc105" "jp106" ];
@@ -84,6 +105,7 @@
           (yogabook-linux.yogabook-modules {
             inherit (config.boot.kernelPackages) kernel kernelModuleMakeFlags;
             inherit (cfg) enableHapticCalibration;
+            enableAudio = cfg.enableCustomAudio;
           })
         ];
 
@@ -93,14 +115,16 @@
         # Required for LUKS password entry via touch keyboard in initrd
         boot.initrd.kernelModules = yogabookKernelModules;
 
-        # Udev rules in initrd (symlink touch keyboard device for the handler)
+        # Udev rules in initrd: symlink Goodix touch digitizer as /dev/touch_keyboard
+        boot.initrd.services.udev.packages = [ touch-keyboard ];
         boot.initrd.services.udev.rules = ''
-          # Tag Goodix Capacitive TouchScreen with TOUCH_KEYBOARD=1 directly
-          ACTION=="add|change", SUBSYSTEM=="input", ATTRS{name}=="Goodix Capacitive TouchScreen", ENV{TOUCH_KEYBOARD}="1"
-
-          # Symlink touchscreen digitizer for the keyboard driver
-          ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ENV{TOUCH_KEYBOARD}=="1", SYMLINK+="touch_keyboard", TAG+="systemd", ENV{SYSTEMD_WANTS}+="touch-keyboard-handler.service"
+          # Symlink touchscreen digitizer for the keyboard driver directly using parent name attribute
+          ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="Goodix Capacitive TouchScreen", SYMLINK+="touch_keyboard"
         '';
+
+        boot.initrd.systemd.storePaths = [
+          touch-keyboard
+        ];
 
         # Copy layout config into initrd
         boot.initrd.systemd.contents = {
@@ -111,12 +135,18 @@
         boot.initrd.systemd.services.touch-keyboard-handler = {
           description = "Touch keyboard handler in initrd";
           wantedBy = [ "initrd.target" ];
-          after = [ "initrd-root-device.target" ];
+          after = [ "systemd-udevd.service" "systemd-udev-trigger.service" ];
+          requires = [ "systemd-udevd.service" ];
+          unitConfig = {
+            DefaultDependencies = false;
+          };
           serviceConfig = {
             Type = "simple";
             WorkingDirectory = "/etc/touch_keyboard";
+            ExecStartPre = "${config.boot.initrd.systemd.package}/bin/udevadm wait --timeout=10 /dev/touch_keyboard";
             ExecStart = "${touch-keyboard}/bin/touch_keyboard_handler -m 1.0 -D 6";
-            DefaultDependencies = false;
+            Restart = "on-failure";
+            RestartSec = "2s";
           };
         };
 
@@ -126,6 +156,7 @@
           "fbcon=rotate:1"
           "random.trust_cpu=1"
           "systemd.restore_state=0"
+          "lenovo_yogabook.ignore_pen_led=1"
         ];
 
         # Enable firmware
@@ -139,9 +170,14 @@
         ];
 
         # Override UCM2 directory via environment variable to avoid rebuilds of GUI apps
-        environment.sessionVariables = {
+        environment.sessionVariables = lib.mkIf cfg.enableCustomAudio {
           ALSA_CONFIG_UCM2 = "${alsa-ucm-conf-yogabook}/share/alsa/ucm2";
         };
+
+        # Ensure that audio services (which run as systemd user services) also see the custom UCM configurations
+        systemd.user.services.pipewire.environment.ALSA_CONFIG_UCM2 = lib.mkIf cfg.enableCustomAudio "${alsa-ucm-conf-yogabook}/share/alsa/ucm2";
+        systemd.user.services.wireplumber.environment.ALSA_CONFIG_UCM2 = lib.mkIf cfg.enableCustomAudio "${alsa-ucm-conf-yogabook}/share/alsa/ucm2";
+        systemd.user.services.pulseaudio.environment.ALSA_CONFIG_UCM2 = lib.mkIf cfg.enableCustomAudio "${alsa-ucm-conf-yogabook}/share/alsa/ucm2";
 
         # Disable default initrd modules when using the custom kernel to prevent
         # errors from missing legacy storage modules (ahci, ata_piix, etc.) and
@@ -183,6 +219,9 @@
         services.udev.extraRules = ''
           # Symlink touchscreen digitizer for the keyboard driver
           ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ENV{TOUCH_KEYBOARD}=="1", SYMLINK+="touch_keyboard", TAG+="systemd", ENV{SYSTEMD_WANTS}+="touch-keyboard-handler.service"
+
+          # Rotate Yoga Book Wacom pen digitizer coordinates by 90 degrees Clockwise to match landscape screen
+          ACTION=="add|change", SUBSYSTEM=="input", ATTRS{name}=="Wacom HID 169 Pen", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"
 
           # DRV2604 Haptic vibrators symlinks
           KERNEL=="event*", SUBSYSTEM=="input", KERNELS=="i2c-DRV2604:00", SYMLINK+="right_vibrator"
