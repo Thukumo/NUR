@@ -322,4 +322,6 @@
         environment.etc."touch_keyboard".source = touch-keyboard-etc;
       };
     };
+  rclamonacc = import ./rclamonacc.nix;
 }
+
